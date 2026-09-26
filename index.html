@@ -675,6 +675,7 @@
       // Limpiar canvas antes de dibujar
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       
+      handPresent = Boolean(results.multiHandLandmarks && results.multiHandLandmarks.length > 0);
       if (!handPresent && currentStage > 1 && !isTransitioning) {
           handAlert.style.display = 'block';
           if (currentStage === 3 || currentStage === 4) {
@@ -687,11 +688,6 @@
         handPresent = true;
         handAlert.style.display = 'none';
         
-        // Reanudar si estaba pausado por pérdida de mano
-        if ((currentStage === 3 || currentStage === 4) && videoTexto.paused) {
-             // startVideoAndAudioAccelerated maneja esto
-        }
-
         const landmarks = results.multiHandLandmarks[0];
 
         // Dibujar puntos de la mano naranja
@@ -727,6 +723,8 @@
         } else if (currentStage === 4) {
           if (isClosedFist(landmarks)) {
             finishExperience();
+          } else if (isOpenHand(landmarks)) {
+            resumeVideoAndAudio();
           }
         }
 
@@ -937,14 +935,19 @@
       return foldedCount >= 3;
     }
 
-    function startVideoAndAudioAccelerated() {
-      if (videoTexto.style.opacity === "1" && !videoTexto.paused) return;
-
-      if (videoTexto.paused) {
-          videoTexto.play().catch(e => console.warn("Error al reproducir video:", e));
-          // No necesitamos reiniciar la aceleración si ya estaba corriendo
-          if (speedAccelInterval) return; 
+    function resumeVideoAndAudio() {
+      if (audioSmallHello.paused) {
+        audioSmallHello.play().catch(e => console.warn("Error al reanudar canción:", e));
       }
+      if (videoTexto.paused) {
+        videoTexto.play().catch(e => console.warn("Error al reproducir video:", e));
+      }
+    }
+
+    function startVideoAndAudioAccelerated() {
+      // La canción también puede estar pausada tras perder la mano.
+      resumeVideoAndAudio();
+      if (videoTexto.style.opacity === "1") return;
 
       videoTexto.style.opacity = "1";
       
