@@ -574,6 +574,7 @@
     const imageHitData = new Map();
     const hoverTimers = new Map();
 
+    let detectionActive = false;
     let currentStage = 1; 
     let handPresent = false;
     let loadProgress = 0; 
@@ -635,6 +636,8 @@
     }
 
     async function initCamera() {
+      detectionActive = true;
+      handAlert.style.display = 'none';
       Object.values(screens).forEach(s => s.classList.remove('active'));
       interactiveBg.classList.add('active');
       
@@ -661,7 +664,7 @@
         hands.onResults(onHandResults);
 
         camera = new Camera(videoElement, {
-          onFrame: async () => { await hands.send({ image: videoElement }); },
+          onFrame: async () => { if (detectionActive) await hands.send({ image: videoElement }); },
           width: 320,
           height: 240
         });
@@ -671,6 +674,7 @@
     }
 
     function onHandResults(results) {
+      if (!detectionActive) return;
       // Limpiar canvas antes de dibujar
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       
@@ -978,19 +982,29 @@
       // La música conserva el volumen bajo del inicio durante todo el recuerdo.
     }
 
+    function stopDetection() {
+      detectionActive = false;
+      handPresent = false;
+      openHandSince = null;
+      handAlert.style.display = 'none';
+      if (camera) camera.stop();
+      const stream = videoElement.srcObject;
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      videoElement.srcObject = null;
+      cameraContainer.style.display = 'none';
+      fingerCursor.style.display = 'none';
+    }
+
     function finishExperience() {
+      stopDetection();
       // 1. Limpiar todos los intervalos y temporizadores
       clearInterval(speedAccelInterval);
       clearTimeout(shakeTimer);
       speedAccelInterval = null;
       shakeTimer = null;
 
-      // 2. Parar Cámara Web (DEJAR DE INTERACTUAR)
-      if (camera) {
-          camera.stop();
-          console.log("Cámara web detenida.");
-      }
-      
+      // La detección ya se desactivó antes de detener la cámara.
+
       // 3. Limpiar canvas final para no dejar rastro naranja
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
 
@@ -1011,6 +1025,7 @@
     }
 
     function resetExperience() {
+      stopDetection();
       // Reiniciar estado
       currentStage = 1;
       loadProgress = 0;
