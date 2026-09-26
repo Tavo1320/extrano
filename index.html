@@ -130,7 +130,7 @@
 
     .title {
       font-family: 'Dickson', sans-serif;
-      font-size: 6rem;
+      font-size: 9rem;
       font-weight: normal;
       letter-spacing: 5px;
       margin-bottom: 10px;
@@ -521,7 +521,7 @@
 
   <!-- PANTALLA 4 (Final) -->
   <div id="screen-4" class="screen" style="background: #111;">
-    <h1 class="title" style="font-family: 'Dickson', sans-serif; font-size: 6rem; letter-spacing: 5px; text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);">EXTRAÑO</h1>
+    <h1 class="title" style="font-family: 'Dickson', sans-serif; font-size: 9rem; letter-spacing: 5px; text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);">EXTRAÑO</h1>
     <button class="btn-svg-wrapper" onclick="resetExperience()" style="border: 2px solid var(--color-texto); padding: 12px 35px; border-radius: 30px; color: var(--color-texto); font-family: 'Manrope', sans-serif; font-weight: 700; width: auto; height: auto;">
       REPETIR EXPERIENCIA
     </button>
@@ -579,6 +579,7 @@
     let loadProgress = 0; 
     let shakeProgress = 0; 
     let lastRingY = null;
+    let openHandSince = null;
     let isTransitioning = false;
     let speedAccelInterval = null;
     let volumeFadeInterval = null;
@@ -715,7 +716,13 @@
           processRingPinchShakeTimed(landmarks);
         } else if (currentStage === 3) {
           if (isOpenHand(landmarks)) {
-            startVideoAndAudioAccelerated();
+            if (openHandSince === null) openHandSince = performance.now();
+            // Esperar un gesto abierto sostenido, separado del gesto de agitar.
+            if (performance.now() - openHandSince >= 500) {
+              startVideoAndAudioAccelerated();
+            }
+          } else {
+            openHandSince = null;
           }
         } else if (currentStage === 4) {
           if (isClosedFist(landmarks)) {
@@ -725,6 +732,7 @@
 
       } else {
         handPresent = false;
+        openHandSince = null;
         // La alerta y pausa se manejan al inicio de la función si handPresent es false
       }
     }
@@ -896,21 +904,24 @@
       // Mantener cursor naranja oculto
 
       currentStage = 3;
+      openHandSince = null;
+      videoTexto.pause();
       instructionText.innerText = "Abre tu mano y mantenla abierta mientras se reproduce el recuerdo";
       instructionIcon.src = "mano_abierta.svg";
     }
 
     function isOpenHand(lm) {
+      const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
       const tips = [8, 12, 16, 20];
       const pips = [6, 10, 14, 18];
-      let extendedCount = 0;
-
-      for (let i = 0; i < 4; i++) {
-        if (lm[tips[i]].y < lm[pips[i]].y) {
-          extendedCount++;
-        }
-      }
-      return extendedCount >= 3;
+      const palmSize = distance(lm[0], lm[9]);
+      if (palmSize < 0.01) return false;
+      // La pinza anular-pulgar usada para agitar nunca inicia el video.
+      if (distance(lm[4], lm[16]) < 0.12) return false;
+      // Los cuatro dedos deben estar extendidos, independientemente de la orientación.
+      return tips.every((tip, i) =>
+        distance(lm[tip], lm[0]) > distance(lm[pips[i]], lm[0]) + palmSize * 0.15
+      );
     }
 
     function isClosedFist(lm) {
@@ -1024,6 +1035,7 @@
       loadProgress = 0;
       shakeProgress = 0;
       lastRingY = null;
+      openHandSince = null;
       isTransitioning = false;
       handPresent = false;
 
