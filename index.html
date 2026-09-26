@@ -405,6 +405,12 @@
       transition: opacity 0.5s ease;
     }
 
+    #screen-1.active ~ #hand-alert,
+    #screen-2.active ~ #hand-alert,
+    #screen-4.active ~ #hand-alert {
+      display: none !important;
+    }
+
     #hand-alert {
       position: absolute;
       top: 50%;
@@ -587,6 +593,7 @@
     let camera = null; // Instancia de la cámara
 
     function goToScreen(num) {
+      handAlert.style.display = 'none';
       Object.values(screens).forEach(s => s.classList.remove('active'));
       interactiveBg.classList.remove('active');
       screens[num].classList.add('active');
@@ -674,7 +681,11 @@
     }
 
     function onHandResults(results) {
-      if (!detectionActive) return;
+      if (!detectionActive || screens[1].classList.contains('active') ||
+          screens[2].classList.contains('active') || screens[4].classList.contains('active')) {
+        handAlert.style.display = 'none';
+        return;
+      }
       // Limpiar canvas antes de dibujar
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       
