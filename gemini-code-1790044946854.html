@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EXTRAÑO - Experiencia Interactiva</title>
+  
+  <!-- MediaPipe Hands & Camera Utils -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <!-- Tipografía Manrope desde Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Declaración de Tipografías Personalizadas */
+    @font-face {
+      font-family: 'Hansol';
+      src: url('Hansol.ttf') format('truetype'),
+           url('Hansol.woff2') format('woff2'),
+           url('Hansol.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: 'Dickson';
+      src: url('Dickson.ttf') format('truetype'),
+           url('Dickson.woff2') format('woff2'),
+           url('Dickson.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    :root {
+      --color-texto: #ffe3b3;
+      --color-accent: #ff6600;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      color: var(--color-texto);
+    }
+
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* --- PANTALLA 1: FONDO ANIMADO --- */
+    #screen-1 {
+      position: relative;
+      background-color: #000;
+      overflow: hidden;
+    }
+
+    .bg-slideshow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .bg-slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      animation: ultraSmoothFade 18s infinite ease-in-out;
+      will-change: opacity;
+    }
+
+    .bg-slide-1 { animation-delay: 0s; }
+    .bg-slide-2 { animation-delay: 6s; }
+    .bg-slide-3 { animation-delay: 12s; }
+
+    @keyframes ultraSmoothFade {
+      0% { opacity: 0; }
+      16% { opacity: 1; }
+      33% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 0; }
+    }
+
+    .screen-1-content {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .subtitle {
+      font-family: 'Hansol', 'Segoe UI', sans-serif;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .title {
+      font-family: 'Dickson', sans-serif;
+      font-size: 6rem;
+      font-weight: normal;
+      letter-spacing: 5px;
+      margin-bottom: 10px;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);
+    }
+
+    .instruction-text {
+      font-family: 'Hansol', 'Segoe UI', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+      margin-bottom: 35px;
+      opacity: 0.95;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+
+    .btn-svg-wrapper {
+      background: transparent;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      outline: none;
+      display: inline-block;
+      width: 490px;
+      height: 83px;
+      transition: transform 0.3s ease, filter 0.3s ease;
+    }
+
+    .btn-svg-wrapper img {
+      width: 490px;
+      height: 83px;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+    }
+
+    .btn-svg-wrapper:hover {
+      transform: scale(1.04);
+      filter: drop-shadow(0 0 20px rgba(255, 227, 179, 0.9));
+    }
+
+    #screen-interactive-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      z-index: 1;
+      transition: filter 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    #screen-interactive-bg.active {
+      display: block;
+    }
+
+    #screen-interactive-bg.stage-3-blur {
+      filter: blur(25px) brightness(0.4);
+    }
+
+    #bg-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    .reactive-obj {
+      position: absolute;
+      top: -25px;
+      left: 0;
+      width: 100vw;
+      height: calc(100vh + 25px);
+      object-fit: cover;
+      transition: filter 0.4s ease, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease;
+      z-index: 2;
+      pointer-events: auto;
+      will-change: filter, transform;
+    }
+
+    .reactive-obj-cables {
+      position: absolute;
+      top: -30px;
+      left: 5px;
+      width: 100vw;
+      height: calc(100vh + 30px);
+      object-fit: cover;
+      transition: filter 0.4s ease;
+      z-index: 2;
+      pointer-events: auto;
+      will-change: filter;
+    }
+
+    .reactive-obj.hovered, .reactive-obj-cables.hovered {
+      filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.9)) brightness(1.3);
+    }
+
+    .reactive-obj.grayscale, .reactive-obj-cables.grayscale {
+      filter: grayscale(100%) brightness(0.8);
+    }
+
+    #obj-polaroid.in-focus {
+      z-index: 15;
+      transform: scale(1.15) translateY(-20px);
+      filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.8));
+    }
+
+    #loader-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    #finger-cursor {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: var(--color-accent);
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 100;
+      transform: translate(-50%, -50%);
+      display: none;
+      box-shadow: 0 0 12px var(--color-accent);
+      will-change: left, top;
+    }
+
+    /* Overlay de Instrucciones */
+    .instruction-overlay {
+      position: absolute;
+      top: 5%;
+      width: 90%;
+      left: 5%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      text-align: center;
+      font-family: 'Manrope', sans-serif;
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: #ffe3b3;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.9);
+      z-index: 20;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .instruction-overlay.visible {
+      opacity: 1;
+    }
+
+    .instruction-icon {
+      width: 45px;
+      height: 45px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8));
+    }
+
+    /* Marco Polaroid con Transición para Expansión a Pantalla Completa */
+    #polaroid-frame {
+      position: absolute;
+      top: 52%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 680px;
+      height: 480px;
+      background-color: #000000; /* Fondo negro inicial */
+      border-left: 20px solid #fff;
+      border-right: 20px solid #fff;
+      border-top: 20px solid #fff;
+      border-bottom: 70px solid #fff;
+      border-radius: 4px;
+      display: none;
+      z-index: 15;
+      overflow: visible; /* Permitir barra de progreso fuera */
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
+      
+      /* Transición de 12s para expandir y ocultar bordes */
+      transition: width 12s ease-in-out, 
+                  height 12s ease-in-out, 
+                  top 12s ease-in-out, 
+                  left 12s ease-in-out, 
+                  transform 12s ease-in-out, 
+                  border-color 12s ease-in-out, 
+                  border-width 12s ease-in-out, 
+                  border-radius 12s ease-in-out;
+    }
+
+    /* Clase de Expansión Total a Pantalla Completa */
+    #polaroid-frame.expanded {
+      width: 100vw;
+      height: 100vh;
+      top: 0;
+      left: 0;
+      transform: translate(0, 0);
+      border-color: #000;
+      border-width: 0px;
+      border-radius: 0px;
+      box-shadow: none;
+      overflow: hidden; /* Asegurar recorte del video al expandir */
+    }
+
+    /* Contenedor interno para asegurar recorte correcto de portada/video */
+    .polaroid-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Barra de progreso vertical (sacudir) */
+    #shake-progress-container {
+      position: absolute;
+      top: 0;
+      right: -35px; /* Al lado del marco */
+      width: 10px;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.3);
+      border-radius: 5px;
+      overflow: hidden;
+      display: none; /* Oculta por defecto */
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    #shake-progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%; /* Progreso */
+      background-color: var(--color-accent);
+      border-radius: 5px;
+      /* Animación MÁS SUAVE: Aumentado tiempo y cambiado a ease-out */
+      transition: height 0.2s ease-out;
+      box-shadow: 0 0 15px var(--color-accent);
+    }
+
+    /* Portada Polaroid (Aparece gradualmente de negro) */
+    #portada-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0; /* Totalmente transparente al inicio */
+      filter: blur(20px);
+      transition: opacity 0.15s linear, filter 0.15s linear;
+      z-index: 1;
+    }
+
+    #video-texto {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      z-index: 2;
+      transition: opacity 0.5s ease;
+    }
+
+    #hand-alert {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: #ff4d4d;
+      padding: 20px 40px;
+      border-radius: 10px;
+      font-family: 'Manrope', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      border: 2px solid #ff4d4d;
+      display: none;
+      z-index: 30;
+    }
+
+    #camera-container {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 200px;
+      height: 150px;
+      border: 2px solid var(--color-texto);
+      border-radius: 10px;
+      overflow: hidden;
+      z-index: 25;
+      display: none;
+      background: #000;
+    }
+
+    #webcam, #output-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA 1 -->
+  <div id="screen-1" class="screen active">
+    <div class="bg-slideshow">
+      <img src="fondo_1/fondo_1.svg" class="bg-slide bg-slide-1" alt="Fondo 1" onerror="this.src='fondo_1.svg'">
+      <img src="fondo_2/fondo_2.svg" class="bg-slide bg-slide-2" alt="Fondo 2" onerror="this.src='fondo_2.svg'">
+      <img src="fondo_3/fondo_3.svg" class="bg-slide bg-slide-3" alt="Fondo 3" onerror="this.src='fondo_3.svg'">
+    </div>
+
+    <div class="screen-1-content">
+      <p class="subtitle">bienvenido a la experiencia</p>
+      <h1 class="title">EXTRAÑO</h1>
+      <p class="instruction-text">seleccione el botón para iniciar</p>
+      
+      <button class="btn-svg-wrapper" onclick="goToScreen(2)" aria-label="Empieza">
+        <img src="boton_1/boton_1.svg" alt="Empieza" onerror="this.src='boton_1.svg'">
+      </button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 2 (Permiso de Cámara) -->
+  <div id="screen-2" class="screen">
+    <h2 style="font-family: 'Manrope', sans-serif; font-size: 2.2rem; max-width: 800px; margin-bottom: 30px;">
+      Tu mano tiene el control, descubre el recuerdo
+    </h2>
+    <button class="btn-svg-wrapper" onclick="initExperienceWithAudio()" style="border: 2px solid var(--color-texto); padding: 12px 35px; border-radius: 30px; color: var(--color-texto); font-family: 'Manrope', sans-serif; font-weight: 700; width: auto; height: auto;">
+      ACTIVAR CÁMARA
+    </button>
+  </div>
+
+  <!-- PANTALLA DE INTERACCIÓN FONDO 1 -->
+  <div id="screen-interactive-bg">
+    <div id="stage-1-instruction" class="instruction-overlay visible">
+      <span id="stage-1-text">con tu dedo extendido apunta a los objetos hasta encontrar el recuerdo</span>
+      <img id="stage-1-icon" class="instruction-icon" src="dedo_cursor.svg" alt="Dedo cursor" onerror="this.style.display='none'">
+    </div>
+
+    <img id="bg-img" src="fondo_1.jpeg" alt="Fondo">
+    
+    <img id="obj-cartera" class="reactive-obj" src="cartera.png" alt="cartera">
+    <img id="obj-llaves" class="reactive-obj" src="llaves.png" alt="llaves">
+    <img id="obj-llave_auto" class="reactive-obj" src="llave_auto.png" alt="llave_auto">
+    <img id="obj-libros" class="reactive-obj" src="libros.png" alt="libros">
+    <img id="obj-audifonos" class="reactive-obj" src="audifonos.png" alt="audifonos">
+    <img id="obj-plantita" class="reactive-obj" src="plantita.png" alt="plantita">
+    <img id="obj-pluma" class="reactive-obj" src="pluma.png" alt="pluma">
+    <img id="obj-cables" class="reactive-obj-cables" src="cables.png" alt="cables">
+    <img id="obj-polaroid" class="reactive-obj" src="polaroid.png" alt="polaroid">
+
+    <canvas id="loader-canvas"></canvas>
+  </div>
+
+  <!-- PANTALLA 3 (Revelado Polaroid) -->
+  <div id="screen-3" class="screen">
+    <div id="instruction" class="instruction-overlay">
+      <span id="instruction-text">Junta los dedos anular y pulgar y muévelos de arriba a abajo para revelar la imagen</span>
+      <img id="instruction-icon" class="instruction-icon" src="foto_agitar.svg" alt="Agitar foto">
+    </div>
+    
+    <div id="polaroid-frame">
+      <div class="polaroid-content">
+        <img id="portada-svg" src="portada.svg" alt="Portada SVG Polaroid">
+        <video id="video-texto" src="video_texto.mp4" loop muted playsinline></video>
+      </div>
+      
+      <!-- Barra de progreso de sacudida al lado -->
+      <div id="shake-progress-container">
+        <div id="shake-progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA 4 (Final) -->
+  <div id="screen-4" class="screen" style="background: #111;">
+    <h1 class="title" style="font-family: 'Dickson', sans-serif; font-size: 6rem; letter-spacing: 5px; text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);">EXTRAÑO</h1>
+    <button class="btn-svg-wrapper" onclick="resetExperience()" style="border: 2px solid var(--color-texto); padding: 12px 35px; border-radius: 30px; color: var(--color-texto); font-family: 'Manrope', sans-serif; font-weight: 700; width: auto; height: auto;">
+      REPETIR EXPERIENCIA
+    </button>
+  </div>
+
+  <!-- Audio de fondo -->
+  <audio id="audio-small-hello" src="Small Hello.mp3" loop preload="auto"></audio>
+
+  <div id="hand-alert">NO SE DETECTA MANO</div>
+  <div id="finger-cursor"></div>
+
+  <div id="camera-container">
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="output-canvas"></canvas>
+  </div>
+
+  <script>
+    const screens = {
+      1: document.getElementById('screen-1'),
+      2: document.getElementById('screen-2'),
+      3: document.getElementById('screen-3'),
+      4: document.getElementById('screen-4')
+    };
+
+    const interactiveBg = document.getElementById('screen-interactive-bg');
+    const fingerCursor = document.getElementById('finger-cursor');
+    const cameraContainer = document.getElementById('camera-container');
+    const objPolaroid = document.getElementById('obj-polaroid');
+    const loaderCanvas = document.getElementById('loader-canvas');
+    const loaderCtx = loaderCanvas.getContext('2d');
+    const polaroidFrame = document.getElementById('polaroid-frame');
+    const portadaSvg = document.getElementById('portada-svg');
+    const videoTexto = document.getElementById('video-texto');
+    const audioSmallHello = document.getElementById('audio-small-hello');
+    
+    // Elementos de progreso sacudida
+    const shakeProgressContainer = document.getElementById('shake-progress-container');
+    const shakeProgressBar = document.getElementById('shake-progress-bar');
+    
+    const instruction = document.getElementById('instruction');
+    const instructionText = document.getElementById('instruction-text');
+    const instructionIcon = document.getElementById('instruction-icon');
+    const stage1Instruction = document.getElementById('stage-1-instruction');
+    
+    const handAlert = document.getElementById('hand-alert');
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output-canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    const imageHitData = new Map();
+    const hoverTimers = new Map();
+
+    let currentStage = 1; 
+    let handPresent = false;
+    let loadProgress = 0; 
+    let shakeProgress = 0; 
+    let lastRingY = null;
+    let isTransitioning = false;
+    let speedAccelInterval = null;
+    let volumeFadeInterval = null;
+    let shakeTimer = null;
+    let camera = null; // Instancia de la cámara
+
+    function goToScreen(num) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      interactiveBg.classList.remove('active');
+      screens[num].classList.add('active');
+    }
+
+    // Iniciar el audio y la cámara dentro del mismo evento del clic del usuario
+    function initExperienceWithAudio() {
+      // 1. Iniciar Audio desde Etapa 1
+      audioSmallHello.volume = 0.08;
+      audioSmallHello.currentTime = 0;
+      audioSmallHello.play().then(() => {
+        console.log("Audio de fondo iniciado correctamente.");
+      }).catch(e => {
+        console.warn("Error/Bloqueo al reproducir audio:", e);
+      });
+
+      // 2. Pre-cargar el video de la etapa posterior
+      videoTexto.load();
+
+      // 3. Iniciar Cámara
+      initCamera();
+    }
+
+    function cacheHitCanvases() {
+      const objects = document.querySelectorAll('.reactive-obj, .reactive-obj-cables');
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+
+      objects.forEach(img => {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = w;
+        tempCanvas.height = h;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        const offsetY = img.id === 'obj-cables' ? 30 : 25;
+        const offsetX = img.id === 'obj-cables' ? -5 : 0;
+
+        tempCtx.drawImage(img, offsetX, -offsetY, w, h + offsetY);
+        
+        try {
+          const imgData = tempCtx.getImageData(0, 0, w, h).data;
+          imageHitData.set(img.id, { data: imgData, width: w, height: h });
+        } catch (e) {
+          console.warn("No se pudo escanear colisión por CORS en: " + img.id);
+        }
+      });
+    }
+
+    async function initCamera() {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      interactiveBg.classList.add('active');
+      
+      loaderCanvas.width = window.innerWidth;
+      loaderCanvas.height = window.innerHeight;
+
+      cacheHitCanvases();
+
+      cameraContainer.style.display = 'block';
+      fingerCursor.style.display = 'block';
+
+      if (!camera) {
+        const hands = new Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        hands.setOptions({
+          maxNumHands: 1,
+          modelComplexity: 0,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onHandResults);
+
+        camera = new Camera(videoElement, {
+          onFrame: async () => { await hands.send({ image: videoElement }); },
+          width: 320,
+          height: 240
+        });
+      }
+      
+      camera.start();
+    }
+
+    function onHandResults(results) {
+      // Limpiar canvas antes de dibujar
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      
+      if (!handPresent && currentStage > 1 && !isTransitioning) {
+          handAlert.style.display = 'block';
+          if (currentStage === 3 || currentStage === 4) {
+            videoTexto.pause();
+            audioSmallHello.pause();
+          }
+      }
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        handPresent = true;
+        handAlert.style.display = 'none';
+        
+        // Reanudar si estaba pausado por pérdida de mano
+        if ((currentStage === 3 || currentStage === 4) && videoTexto.paused) {
+             // startVideoAndAudioAccelerated maneja esto
+        }
+
+        const landmarks = results.multiHandLandmarks[0];
+
+        // Dibujar puntos de la mano naranja
+        canvasCtx.fillStyle = '#FF6600';
+        for (const lm of landmarks) {
+          canvasCtx.beginPath();
+          canvasCtx.arc(lm.x * canvasElement.width, lm.y * canvasElement.height, 3, 0, 2 * Math.PI);
+          canvasCtx.fill();
+        }
+
+        const indexTip = landmarks[8];
+        const cursorX = Math.round((1 - indexTip.x) * window.innerWidth);
+        const cursorY = Math.round(indexTip.y * window.innerHeight);
+
+        // Actualizar posición del cursor (aunque esté oculto en etapas avanzadas)
+        fingerCursor.style.left = `${cursorX}px`;
+        fingerCursor.style.top = `${cursorY}px`;
+
+        if (currentStage === 1 && !isTransitioning) {
+          processBackgroundHover(cursorX, cursorY);
+        } else if (currentStage === 2) {
+          processRingPinchShakeTimed(landmarks);
+        } else if (currentStage === 3) {
+          if (isOpenHand(landmarks)) {
+            startVideoAndAudioAccelerated();
+          }
+        } else if (currentStage === 4) {
+          if (isClosedFist(landmarks)) {
+            finishExperience();
+          }
+        }
+
+      } else {
+        handPresent = false;
+        // La alerta y pausa se manejan al inicio de la función si handPresent es false
+      }
+    }
+
+    function isPixelHoveredFast(imgId, x, y) {
+      const cached = imageHitData.get(imgId);
+      if (!cached) return false;
+
+      if (x < 0 || x >= cached.width || y < 0 || y >= cached.height) return false;
+
+      const alphaIndex = (y * cached.width + x) * 4 + 3;
+      return cached.data[alphaIndex] > 10;
+    }
+
+    function processBackgroundHover(x, y) {
+      const objects = document.querySelectorAll('.reactive-obj, .reactive-obj-cables');
+      
+      objects.forEach(obj => {
+        const isHovered = isPixelHoveredFast(obj.id, x, y);
+        
+        if (isHovered) {
+          obj.classList.add('hovered');
+
+          if (obj.id !== 'obj-polaroid') {
+            if (!hoverTimers.has(obj.id)) {
+              const timer = setTimeout(() => {
+                obj.classList.add('grayscale');
+              }, 1000);
+              hoverTimers.set(obj.id, timer);
+            }
+          }
+        } else {
+          obj.classList.remove('hovered');
+          
+          if (obj.id !== 'obj-polaroid') {
+            if (hoverTimers.has(obj.id)) {
+              clearTimeout(hoverTimers.get(obj.id));
+              hoverTimers.delete(obj.id);
+            }
+            obj.classList.remove('grayscale');
+          }
+        }
+      });
+
+      if (isPixelHoveredFast('obj-polaroid', x, y)) {
+        loadProgress += 2.5;
+        drawHaloWheel(x, y, loadProgress);
+        if (loadProgress >= 100) {
+          startPolaroidForegroundTransition();
+        }
+      } else {
+        if (loadProgress > 0) {
+          loadProgress -= 3;
+          if (loadProgress < 0) loadProgress = 0;
+          drawHaloWheel(x, y, loadProgress);
+        }
+      }
+    }
+
+    function drawHaloWheel(x, y, percent) {
+      loaderCtx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
+      if (percent <= 0) return;
+
+      const radius = 60;
+
+      loaderCtx.beginPath();
+      loaderCtx.arc(x, y, radius, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * (percent / 100)));
+      loaderCtx.strokeStyle = '#ffffff';
+      loaderCtx.lineWidth = 8;
+      loaderCtx.shadowColor = '#ffffff';
+      loaderCtx.shadowBlur = 15;
+      loaderCtx.stroke();
+    }
+
+    function startPolaroidForegroundTransition() {
+      isTransitioning = true;
+      loaderCtx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
+      
+      hoverTimers.forEach(t => clearTimeout(t));
+      hoverTimers.clear();
+
+      stage1Instruction.classList.remove('visible');
+
+      objPolaroid.src = 'polaroid_completa.png';
+      objPolaroid.classList.add('in-focus');
+
+      setTimeout(() => {
+        currentStage = 2;
+        
+        interactiveBg.classList.add('stage-3-blur');
+        objPolaroid.style.display = 'none';
+        
+        screens[3].classList.add('active');
+        polaroidFrame.style.display = 'block';
+
+        // Ocultar cursor naranja DEFINITIVAMENTE
+        fingerCursor.style.display = 'none';
+        
+        // Mostrar barra de progreso suave
+        shakeProgressContainer.style.display = 'block';
+
+        // Asegurar que comience en NEGRO (opacidad 0 de la portada)
+        portadaSvg.style.opacity = '0';
+        portadaSvg.style.filter = 'blur(20px)';
+
+        setTimeout(() => {
+          instruction.classList.add('visible');
+          isTransitioning = false;
+        }, 600);
+
+      }, 400);
+    }
+
+    function processRingPinchShakeTimed(lm) {
+      const thumbTip = lm[4];
+      const ringTip = lm[16];
+
+      const dx = thumbTip.x - ringTip.x;
+      const dy = thumbTip.y - ringTip.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      const isRingPinching = distance < 0.12;
+
+      if (isRingPinching) {
+        if (!shakeTimer) {
+          shakeTimer = setTimeout(() => {
+            completeShakePhase();
+          }, 10000);
+        }
+
+        const currentY = ringTip.y;
+        if (lastRingY !== null) {
+          const deltaY = Math.abs(currentY - lastRingY);
+          
+          if (deltaY > 0.008) {
+            shakeProgress += deltaY * 35; 
+            if (shakeProgress > 100) shakeProgress = 100;
+
+            // Actualizar barra de progreso (con animación suave por CSS)
+            shakeProgressBar.style.height = `${shakeProgress}%`;
+
+            // Transición paulatina de Negro a Portada según el progreso
+            let alpha = shakeProgress / 100;
+            let blurVal = Math.max(0, 20 - (alpha * 20));
+            
+            portadaSvg.style.opacity = alpha.toString();
+            portadaSvg.style.filter = `blur(${blurVal}px)`;
+
+            if (shakeProgress >= 100) {
+              completeShakePhase();
+            }
+          }
+        }
+        lastRingY = currentY;
+      }
+    }
+
+    function completeShakePhase() {
+      if (currentStage !== 2) return;
+      clearTimeout(shakeTimer);
+      shakeTimer = null;
+
+      portadaSvg.style.opacity = '1';
+      portadaSvg.style.filter = 'blur(0px)';
+      
+      // Ocultar barra de progreso
+      shakeProgressContainer.style.display = 'none';
+      
+      // Mantener cursor naranja oculto
+
+      currentStage = 3;
+      instructionText.innerText = "Abre tu mano y mantenla abierta mientras se reproduce el recuerdo";
+      instructionIcon.src = "mano_abierta.svg";
+    }
+
+    function isOpenHand(lm) {
+      const tips = [8, 12, 16, 20];
+      const pips = [6, 10, 14, 18];
+      let extendedCount = 0;
+
+      for (let i = 0; i < 4; i++) {
+        if (lm[tips[i]].y < lm[pips[i]].y) {
+          extendedCount++;
+        }
+      }
+      return extendedCount >= 3;
+    }
+
+    function isClosedFist(lm) {
+      const tips = [8, 12, 16, 20];
+      const pips = [6, 10, 14, 18];
+      let foldedCount = 0;
+
+      for (let i = 0; i < 4; i++) {
+        if (lm[tips[i]].y > lm[pips[i]].y) {
+          foldedCount++;
+        }
+      }
+      return foldedCount >= 3;
+    }
+
+    function startVideoAndAudioAccelerated() {
+      if (videoTexto.style.opacity === "1" && !videoTexto.paused) return;
+
+      if (videoTexto.paused) {
+          videoTexto.play().catch(e => console.warn("Error al reproducir video:", e));
+          // No necesitamos reiniciar la aceleración si ya estaba corriendo
+          if (speedAccelInterval) return; 
+      }
+
+      videoTexto.style.opacity = "1";
+      
+      // Activa la expansión a pantalla completa borrando bordes paulatinamente
+      polaroidFrame.classList.add('expanded');
+
+      videoTexto.playbackRate = 0.25;
+      
+      let currentRate = 0.25;
+      clearInterval(speedAccelInterval);
+
+      speedAccelInterval = setInterval(() => {
+        if (!handPresent) return;
+
+        currentRate += 0.05;
+        if (currentRate >= 1.0) {
+          currentRate = 1.0;
+          videoTexto.playbackRate = 1.0;
+          clearInterval(speedAccelInterval);
+          speedAccelInterval = null; // Limpiar referencia
+
+          currentStage = 4;
+          instructionText.innerText = "Cierra la mano cuando estés seguro que quieres dejar ir el recuerdo";
+          instructionIcon.style.display = 'none';
+        } else {
+          videoTexto.playbackRate = currentRate;
+        }
+      }, 200);
+
+      // Subida paulatina de volumen desde 0.08 a 1.0 mientras se expande la pantalla (12s)
+      clearInterval(volumeFadeInterval);
+      volumeFadeInterval = setInterval(() => {
+        if (!handPresent) return;
+
+        if (audioSmallHello.volume < 1.0) {
+          let nextVolume = audioSmallHello.volume + 0.02;
+          if (nextVolume >= 1.0) {
+            audioSmallHello.volume = 1.0;
+            clearInterval(volumeFadeInterval);
+            volumeFadeInterval = null; // Limpiar referencia
+          } else {
+            audioSmallHello.volume = nextVolume;
+          }
+        } else {
+             clearInterval(volumeFadeInterval);
+             volumeFadeInterval = null;
+        }
+      }, 250);
+    }
+
+    function finishExperience() {
+      // 1. Limpiar todos los intervalos y temporizadores
+      clearInterval(speedAccelInterval);
+      clearInterval(volumeFadeInterval);
+      clearTimeout(shakeTimer);
+      speedAccelInterval = null;
+      volumeFadeInterval = null;
+      shakeTimer = null;
+
+      // 2. Parar Cámara Web (DEJAR DE INTERACTUAR)
+      if (camera) {
+          camera.stop();
+          console.log("Cámara web detenida.");
+      }
+      
+      // 3. Limpiar canvas final para no dejar rastro naranja
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+      // 4. Ocultar elementos UI
+      interactiveBg.classList.remove('active', 'stage-3-blur');
+      polaroidFrame.style.display = 'none';
+      polaroidFrame.classList.remove('expanded');
+      cameraContainer.style.display = 'none';
+      fingerCursor.style.display = 'none';
+      shakeProgressContainer.style.display = 'none';
+      
+      // 5. Pausar media
+      videoTexto.pause();
+      audioSmallHello.pause();
+      
+      // 6. Ir a pantalla final
+      goToScreen(4);
+    }
+
+    function resetExperience() {
+      // Reiniciar estado
+      currentStage = 1;
+      loadProgress = 0;
+      shakeProgress = 0;
+      lastRingY = null;
+      isTransitioning = false;
+      handPresent = false;
+
+      objPolaroid.src = 'polaroid.png';
+      objPolaroid.classList.remove('in-focus');
+      objPolaroid.style.display = 'block';
+
+      document.querySelectorAll('.reactive-obj, .reactive-obj-cables').forEach(obj => {
+        obj.classList.remove('grayscale', 'hovered');
+      });
+
+      interactiveBg.classList.remove('stage-3-blur');
+      stage1Instruction.classList.add('visible');
+
+      // Limpiar canvas de carga
+      loaderCtx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
+      
+      polaroidFrame.classList.remove('expanded');
+      shakeProgressContainer.style.display = 'none';
+      shakeProgressBar.style.height = '0%';
+      
+      // Reajustar media
+      portadaSvg.style.opacity = '0';
+      portadaSvg.style.filter = 'blur(20px)';
+      videoTexto.style.opacity = '0';
+      videoTexto.playbackRate = 1.0;
+      videoTexto.currentTime = 0;
+      
+      audioSmallHello.pause();
+      audioSmallHello.currentTime = 0;
+      audioSmallHello.volume = 0.08;
+
+      instruction.classList.remove('visible');
+      instructionText.innerText = "Junta los dedos anular y pulgar y muévelos de arriba a abajo para revelar la imagen";
+      instructionIcon.src = "foto_agitar.svg";
+      instructionIcon.style.display = 'inline-block';
+
+      // Importante: No reiniciar cámara aquí, dejar que goToScreen(1) muestre inicio.
+      // La cámara se reinicia en initExperienceWithAudio al pulsar empezar de nuevo.
+      goToScreen(1);
+    }
+
+    window.addEventListener('resize', () => {
+      if (interactiveBg.classList.contains('active')) {
+        loaderCanvas.width = window.innerWidth;
+        loaderCanvas.height = window.innerHeight;
+        cacheHitCanvases();
+      }
+    });
+  </script>
+</body>
+</html>
