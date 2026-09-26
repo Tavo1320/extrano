@@ -582,7 +582,6 @@
     let openHandSince = null;
     let isTransitioning = false;
     let speedAccelInterval = null;
-    let volumeFadeInterval = null;
     let shakeTimer = null;
     let camera = null; // Instancia de la cámara
 
@@ -680,7 +679,6 @@
           handAlert.style.display = 'block';
           if (currentStage === 3 || currentStage === 4) {
             videoTexto.pause();
-            audioSmallHello.pause();
           }
       }
 
@@ -977,34 +975,14 @@
         }
       }, 200);
 
-      // Subida paulatina de volumen desde 0.08 a 1.0 mientras se expande la pantalla (12s)
-      clearInterval(volumeFadeInterval);
-      volumeFadeInterval = setInterval(() => {
-        if (!handPresent) return;
-
-        if (audioSmallHello.volume < 1.0) {
-          let nextVolume = audioSmallHello.volume + 0.02;
-          if (nextVolume >= 1.0) {
-            audioSmallHello.volume = 1.0;
-            clearInterval(volumeFadeInterval);
-            volumeFadeInterval = null; // Limpiar referencia
-          } else {
-            audioSmallHello.volume = nextVolume;
-          }
-        } else {
-             clearInterval(volumeFadeInterval);
-             volumeFadeInterval = null;
-        }
-      }, 250);
+      // La música conserva el volumen bajo del inicio durante todo el recuerdo.
     }
 
     function finishExperience() {
       // 1. Limpiar todos los intervalos y temporizadores
       clearInterval(speedAccelInterval);
-      clearInterval(volumeFadeInterval);
       clearTimeout(shakeTimer);
       speedAccelInterval = null;
-      volumeFadeInterval = null;
       shakeTimer = null;
 
       // 2. Parar Cámara Web (DEJAR DE INTERACTUAR)
